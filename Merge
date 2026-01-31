@@ -1,0 +1,48 @@
+import pandas as pd
+import sqlite3
+from google.colab import files
+
+# Upload orders.csv
+print("Please upload orders.csv:")
+uploaded_orders = files.upload()
+orders_filename = list(uploaded_orders.keys())[0]
+orders = pd.read_csv(orders_filename)
+print(f'User uploaded file "{orders_filename}" with length {len(uploaded_orders[orders_filename])} bytes')
+
+# Upload users.json
+print("Please upload users.json:")
+uploaded_users = files.upload()
+users_filename = list(uploaded_users.keys())[0]
+users = pd.read_json(users_filename)
+print(f'User uploaded file "{users_filename}" with length {len(uploaded_users[users_filename])} bytes')
+
+conn = sqlite3.connect("restaurants.db")
+cursor = conn.cursor()
+with open("restaurants.sql", "r") as file:
+    sql_script = file.read()
+
+# Add DROP TABLE IF EXISTS to handle repeated executions
+cursor.execute("DROP TABLE IF EXISTS restaurants;")
+cursor.executescript(sql_script)
+conn.commit()
+restaurant = pd.read_sql_query("SELECT * FROM restaurants", conn)
+conn.close()
+restaurant.head()
+restaurant.info()
+orders_users = orders.merge(
+    users,
+    on="user_id",
+    how="left"
+)
+orders_users.shape
+orders.shape
+final_df = orders_users.merge(
+    restaurant,
+    on="restaurant_id",
+    how="left"
+)
+final_df.shape
+final_df.isnull().sum()
+final_df.to_csv("final_food_delivery_dataset.csv",
+                index=False
+                )
